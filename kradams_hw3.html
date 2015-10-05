@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+  <style>
+    
+    body {
+      font: 15px serif;
+    }
+  
+  .axis path,
+  .axis line {
+    fill: none;
+    stroke: black;
+    shape-rendering: crispEdges;
+  }
+  
+  .axis text {
+    font: 10px sans-serif;
+  }
+  
+    </style>
+  <body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+    <script>
+      
+      var width = 500,
+          height = 400,
+          padding = 50;
+      
+      var x0 = d3.scale.ordinal()
+                .rangeRoundBands([0, width-padding], .2);
+      
+      var x1 = d3.scale.ordinal();
+      
+      var y = d3.scale.linear()
+                .range([height-padding, padding]);
+      
+      var color = d3.scale.ordinal()
+                    .range(["#2E9AFE", "#FE9A2E"]);
+      
+      var xAxis = d3.svg.axis()
+                    .scale(x0)
+                    .orient("bottom");
+      
+      var yAxis = d3.svg.axis()
+                    .scale(y)
+                    .orient("left")
+                    .tickFormat(d3.format("0f"));
+      
+      var svg = d3.select("body").append("svg")
+                  .attr("width", width + padding)
+                  .attr("height", height + padding)
+                  .append("g")
+                  .attr("transform", "translate(" + padding + "," + padding + ")");
+      
+      d3.tsv("mydata.tsv", function(error, data) {
+             if (error) throw error;
+             
+             var binNames = d3.keys(data[0]).filter(function(key) { return key !== "DistanceBin"; });
+             
+             data.forEach(function(d) {
+                          d.counts = binNames.map(function(name) { return {name: name, value: +d[name]}; });
+                          });
+             
+             x0.domain(data.map(function(d) { return d.DistanceBin; }));
+             
+             x1.domain(binNames).rangeRoundBands([0, x0.rangeBand()]);
+             
+             y.domain([0, d3.max(data, function(d) { return d3.max(d.counts, function(d) { return d.value; }); })]);
+             
+             svg.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate("+padding+"," + (height-padding) + ")")
+                .call(xAxis);
+             
+             svg.append("g")
+                .attr("class", "y axis")
+                .attr("transform","translate("+padding+",0)")
+                .call(yAxis);
+             
+             svg.append("text")
+                .attr("transform", "translate("+(padding/3)+","+(height/2)+")rotate(-90)")
+                .style("text-anchor", "middle")
+                .text("Number of throws");
+             
+             svg.append("text")
+                .attr("transform", "translate("+(width/2)+","+(height-padding/3)+")")
+                .style("text-anchor", "middle")
+                .text("Distance from target (inches)");
+             
+             svg.append("text")
+                .attr("x", (width / 2))
+                .attr("y", 0 - (padding / 2))
+                .attr("text-anchor", "middle")
+                .style("font-size", "16px")
+                .style("text-decoration", "underline")
+                .text("Distribution of Distances to Target of Tossed Baby Toys");
+             
+             var DistanceBin = svg.selectAll(".DistanceBin")
+                                  .data(data)
+                                  .enter().append("g")
+                                  .attr("class", "g")
+                                  .attr("transform", function(d) { return "translate(" + x0(d.DistanceBin) + ",0)"; });
+             
+             DistanceBin.selectAll("rect")
+                        .data(function(d) { return d.counts; })
+                        .enter().append("rect")
+                        .attr("width", x1.rangeBand())
+                        .attr("x", function(d) { return x1(d.name); })
+                        .attr("y", function(d) { return y(d.value); })
+                        .attr("height", function(d) { return height - padding - y(d.value); })
+                        .attr("transform","translate("+padding+",0)")
+                        .style("fill", function(d) { return color(d.name); });
+             
+             var legend = svg.selectAll(".legend")
+                              .data(binNames.slice().reverse())
+                              .enter().append("g")
+                              .attr("class", "legend")
+                              .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+             
+             legend.append("rect")
+                  .attr("x", width - 18)
+                  .attr("width", 18)
+                  .attr("height", 18)
+                  .style("fill", color);
+             
+             legend.append("text")
+                  .attr("x", width - 22)
+                  .attr("y", 8)
+                  .attr("dy", ".35em")
+                  .style("text-anchor", "end")
+                  .text(function(d) { return d; });
+             
+             });
+             
+      </script>
